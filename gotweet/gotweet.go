@@ -1,42 +1,171 @@
 package gotweet
+
 import (
 	"encoding/json"
 	"github.com/mrjones/oauth"
 	"io/ioutil"
+	"unicode/utf8"
 )
 
 type App struct {
 	consumer    *oauth.Consumer
 	accessToken *oauth.AccessToken
 }
-
-type APIkeys struct{
-	APIKey string
-	APISecret string
-	AccessToken string
+type APIkeys struct {
+	APIKey            string
+	APISecret         string
+	AccessToken       string
 	AccessTokenSecret string
 }
-type Twitter struct {
-	Users TwitterUsers
-}
-type TwitterUsers struct {
-	contributors_enabled bool
-	created_at string
+type objects map[string]string
 
+type Users struct {
+	Contributors_enabled               bool
+	Created_at                         string
+	Default_profile                    bool
+	Default_profile_image              bool
+	Description                        string
+	Entities                           Entities
+	Favourites_count                   int
+	Follow_request_sent                interface{}
+	Following                          interface{}
+	Followers_count                    int
+	Friends_count                      int
+	Geo_enabled                        bool
+	Id                                 int64
+	Id_str                             string
+	Is_translator                      bool
+	Lang                               string
+	Listed_count                       int
+	Location                           string
+	Name                               string
+	Notifications                      bool
+	Profile_background_color           string
+	Profile_background_image_url       string
+	Profile_background_image_url_https string
+	Profile_background_tile            bool
+	Profile_banner_url                 string
+	Profile_image_url                  string
+	Profile_image_url_https            string
+	Profile_link_color                 string
+	Profile_sidebar_border_color       string
+	Profile_sidebar_fill_color         string
+	Profile_text_color                 string
+	Profile_use_background_image       bool
+	Protected                          bool
+	Screen_name                        string
+	Show_all_inline_media              bool
+	Status                             objects //Tweets
+	Statuses_count                     int
+	Time_zone                          string
+	Url                                string
+	Utc_offset                         int
+	Verified                           bool
+	Withheld_in_countries              string
+	Withheld_scope                     string
 }
+type Entities struct {
+	Hashtags []struct {
+		Indices []int
+		Text    string
+	}
+	Media []struct {
+		Display_url     string
+		Expanded_url    string
+		Id              int64
+		Id_str          string
+		Indices         []int
+		Media_url       string
+		Media_url_https string
+		Sizes           struct {
+			Thumb  Size
+			Large  Size
+			Medium Size
+			Small  Size
+		}
+		Source_status_id     int64
+		Source_status_id_str string
+		Type                 string
+		Url                  string
+	}
+	Urls []struct {
+		Display_url  string
+		Expanded_url string
+		Idices       []int
+		Url          string
+	}
+	User_mentions []struct {
+		Id          int64
+		Id_str      string
+		Indices     []int
+		Name        string
+		Screen_name string
+	}
+}
+type Size struct {
+	H      int
+	Resize string
+	W      int
+}
+type Tweets struct {
+	Contributors              string `json:"contributors"` //非推奨
+	Coordinates               interface{}
+	Created_at                string
+	Current_user_retweet      objects
+	Entities                  Entities
+	Favorite_count            int
+	Favorited                 bool
+	Filter_level              string
+	Geo                       objects
+	Id                        int64
+	Id_str                    string `json:"id_str"`
+	In_reply_to_screen_name   string
+	In_reply_to_status_id     int64
+	In_reply_to_status_id_str string
+	In_reply_to_user_id       int64
+	In_reply_to_user_id_str   string
+	Lang                      string
+	Place                     struct {
+		Attributes   objects
+		Bounding_box objects
+		Country      string
+		Country_code string
+		Full_name    string
+		Id           string
+		Name         string
+		Place_type   string
+		Url          string
+	}
+	Possibly_sensitive    bool
+	Quoted_status_id      int64
+	Quoted_status_id_str  string
+	Quoted_status         objects
+	Scopes                objects
+	Retweet_count         int
+	Retweeted             bool
+	Retweeted_status      objects
+	Source                string
+	Text                  string
+	Truncated             bool
+	User                  Users
+	Withheld_copyright    bool
+	Withheld_in_countries []string
+	Withheld_scope        string
+}
+type Coordinates map[string]string
 
-func TwitterServiceProvider() oauth.ServiceProvider {
+func twitterServiceProvider() oauth.ServiceProvider {
 	return oauth.ServiceProvider{RequestTokenUrl: "http://api.twitter.com/oauth/request_token",
 		AuthorizeTokenUrl: "https://api.twitter.com/oauth/authorize",
 		AccessTokenUrl:    "https://api.twitter.com/oauth/access_token"}
 }
-func Newapp(a APIkeys, sv oauth.ServiceProvider) *App {
+func Newapp(a APIkeys) *App {
 	app := new(App)
-	app.consumer = oauth.NewConsumer(a.APIKey, a.APISecret, sv)
-	app.accessToken = &oauth.AccessToken{Token:a.AccessToken, Secret: a.AccessTokenSecret}
+	app.consumer = oauth.NewConsumer(a.APIKey, a.APISecret, twitterServiceProvider())
+	app.accessToken = &oauth.AccessToken{Token: a.AccessToken, Secret: a.AccessTokenSecret}
 	return app
 }
-func (t *App) Get(url string, params map[string]string) (interface{}, error) {
+func (t *App) Get(url string, params map[string]string, result interface{}) (interface{}, error) {
 	response, err := t.consumer.Get(url, params, t.accessToken)
 	if err != nil {
 		return nil, err
@@ -49,12 +178,12 @@ func (t *App) Get(url string, params map[string]string) (interface{}, error) {
 	}
 
 	// decode
-	var result interface{}
 	err = json.Unmarshal(b, &result)
 	return result, err
 }
 
 func (t *App) Post(url string, params map[string]string) (interface{}, error) {
+
 	response, err := t.consumer.Post(url, params, t.accessToken)
 	if err != nil {
 		return nil, err
@@ -65,9 +194,77 @@ func (t *App) Post(url string, params map[string]string) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
-
-	// decode
 	var result interface{}
+	// decoded
 	err = json.Unmarshal(b, &result)
 	return result, err
+}
+func (t *App) Tweet(params map[string]string) (Tweets, error) {
+	result := Tweets{}
+	url := "https://api.twitter.com/1.1/statuses/update.json"
+	response, err := t.consumer.Post(url, params, t.accessToken)
+	if err != nil {
+		return result, err
+	}
+	defer response.Body.Close()
+
+	b, err := ioutil.ReadAll(response.Body)
+	if err != nil {
+		return result, err
+	}
+	err = json.Unmarshal(b, &result)
+	return result, err
+
+}
+func Distsrings(max int, s string) []string {
+	wc := utf8.RuneCountInString(s)
+	result := append([]string{}, s)
+	if wc <= max {
+		min := wc/max + 1
+		if min==9{}
+	}
+	return result
+}
+func SliceStrlen(slice []string) []int {
+	result := make([]int, len(slice))
+	for n, s := range slice {
+		result[n] = utf8.RuneCountInString(s)
+	}
+	return result
+}
+func SliceFindfunc(t interface{}, f func(interface{}) bool) []int {
+	result := []int{}
+	buf := SliceInterface(t)
+	for n, r := range buf {
+		if f(r) {
+			result = append(result, n)
+		} else {
+			continue
+		}
+	}
+	return result
+}
+func SliceInterface(t interface{}) []interface{} {
+	buf := []interface{}{}
+	switch sl := t.(type) {
+	case []int:
+		for _, i := range sl {
+			buf = append(buf, i)
+		}
+	case []bool:
+		for _, i := range sl {
+			buf = append(buf, i)
+		}
+	case []string:
+		for _, i := range sl {
+			buf = append(buf, i)
+		}
+	case string:
+		for _, i := range sl {
+			buf = append(buf, i)
+		}
+	default:
+		panic("This Type can't use")
+	}
+	return buf
 }
