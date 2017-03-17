@@ -5,6 +5,7 @@ import (
 	"github.com/mrjones/oauth"
 	"io/ioutil"
 	"unicode/utf8"
+	"reflect"
 )
 
 type App struct {
@@ -244,27 +245,15 @@ func SliceFindfunc(t interface{}, f func(interface{}) bool) []int {
 	}
 	return result
 }
-func SliceInterface(t interface{}) []interface{} {
-	buf := []interface{}{}
-	switch sl := t.(type) {
-	case []int:
-		for _, i := range sl {
-			buf = append(buf, i)
+func SliceInterface(t interface{})[]interface{}{
+	buf:=[]interface{}{}
+	switch reflect.TypeOf(t).Kind(){
+	case reflect.Slice:
+		s:=reflect.ValueOf(t)
+		for i:=0;i<s.Len();i++{
+			b:=s.Index(i)
+			buf=append(buf,b.Interface())
 		}
-	case []bool:
-		for _, i := range sl {
-			buf = append(buf, i)
-		}
-	case []string:
-		for _, i := range sl {
-			buf = append(buf, i)
-		}
-	case string:
-		for _, i := range sl {
-			buf = append(buf, i)
-		}
-	default:
-		panic("This Type can't use")
 	}
 	return buf
 }
