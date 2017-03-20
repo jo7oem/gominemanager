@@ -4,8 +4,8 @@ import (
 	"encoding/json"
 	"github.com/mrjones/oauth"
 	"io/ioutil"
-	"unicode/utf8"
 	"reflect"
+	"unicode/utf8"
 )
 
 type App struct {
@@ -222,7 +222,8 @@ func Distsrings(max int, s string) []string {
 	result := append([]string{}, s)
 	if wc <= max {
 		min := wc/max + 1
-		if min==9{}
+		if min == 9 {
+		}
 	}
 	return result
 }
@@ -245,15 +246,29 @@ func SliceFindfunc(t interface{}, f func(interface{}) bool) []int {
 	}
 	return result
 }
-func SliceInterface(t interface{})[]interface{}{
-	buf:=[]interface{}{}
-	switch reflect.TypeOf(t).Kind(){
+func SliceInterface(t interface{}) []interface{} {
+	buf := []interface{}{}
+	switch reflect.TypeOf(t).Kind() {
 	case reflect.Slice:
-		s:=reflect.ValueOf(t)
-		for i:=0;i<s.Len();i++{
-			b:=s.Index(i)
-			buf=append(buf,b.Interface())
+		s := reflect.ValueOf(t)
+		for i := 0; i < s.Len(); i++ {
+			b := s.Index(i)
+			buf = append(buf, b.Interface())
 		}
 	}
 	return buf
+}
+func ForceSplitStringN(limit int, s string) []string {
+	sr := []rune(s)
+	wc := utf8.RuneCountInString(s)
+	result := []string{}
+	dosp := wc / limit
+	for i := 0; i <= dosp; i++ {
+		if i == dosp {
+			result = append(result, string(sr[limit*i:]))
+			break
+		}
+		result = append(result, string(sr[limit*i:limit*(i+1)]))
+	}
+	return result
 }
