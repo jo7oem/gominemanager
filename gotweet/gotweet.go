@@ -217,16 +217,7 @@ func (t *App) Tweet(params map[string]string) (Tweets, error) {
 	return result, err
 
 }
-func Distsrings(max int, s string) []string {
-	wc := utf8.RuneCountInString(s)
-	result := append([]string{}, s)
-	if wc <= max {
-		min := wc/max + 1
-		if min == 9 {
-		}
-	}
-	return result
-}
+
 func SliceStrlen(slice []string) []int {
 	result := make([]int, len(slice))
 	for n, s := range slice {
@@ -255,12 +246,18 @@ func SliceInterface(t interface{}) []interface{} {
 			b := s.Index(i)
 			buf = append(buf, b.Interface())
 		}
+	case reflect.String:
+		s := reflect.ValueOf(t)
+		for i := 0; i < s.Len(); i++ {
+			b := s.Index(i)
+			buf = append(buf, b.Interface())
+		}
 	}
 	return buf
 }
 func ForceSplitStringN(limit int, s string) []string {
 	sr := []rune(s)
-	wc := utf8.RuneCountInString(s)
+	wc := len(sr)
 	result := []string{}
 	dosp := wc / limit
 	for i := 0; i <= dosp; i++ {
@@ -269,6 +266,55 @@ func ForceSplitStringN(limit int, s string) []string {
 			break
 		}
 		result = append(result, string(sr[limit*i:limit*(i+1)]))
+	}
+	return result
+}
+func SplitRunelimit(limit int, s string, sep rune)[]string {
+	rs := []rune(s)
+	result := []string{}
+	f := func(i interface{}) bool {
+		irs := i.(rune)
+		if irs == sep {
+			return true
+		}
+		return false
+	}
+	splitbuf := isuseindexl(SliceFindfunc(rs, f), limit)
+	starti := 0
+	for _, idx := range splitbuf {
+		result = append(result, string(rs[starti:idx]))
+		starti = idx
+	}
+	result = append(result, ForceSplitStringN(limit, string(rs[starti:]))...)
+	return result
+}
+func isuseindexl(il []int, limit int) []int {
+	bfri := 0
+	starti := 0
+	result := []int{}
+	for _, i := range il {
+		nwc := i - starti
+		if nwc < limit {
+			bfri = i
+			continue
+		} else {
+			if (starti != bfri) && (starti-bfri <= limit) {
+				result = append(result, bfri)
+				starti = bfri
+			}
+			if i-bfri <= limit {
+				starti = i
+				bfri = i
+				continue
+			}
+			for j := 1; j <= (i-bfri)/limit; j++ {
+				result = append(result, starti+limit*j)
+			}
+			result = append(result, i)
+			starti=i
+			bfri=i
+			continue
+		}
 	}
 	return result
 }
