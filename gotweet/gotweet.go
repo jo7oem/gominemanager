@@ -269,7 +269,7 @@ func ForceSplitStringN(limit int, s string) []string {
 	}
 	return result
 }
-func SplitRunelimit(limit int, s string, sep rune)[]string {
+func SplitRunelimit(limit int, s string, sep rune) []string {
 	rs := []rune(s)
 	result := []string{}
 	f := func(i interface{}) bool {
@@ -311,10 +311,32 @@ func isuseindexl(il []int, limit int) []int {
 				result = append(result, starti+limit*j)
 			}
 			result = append(result, i)
-			starti=i
-			bfri=i
+			starti = i
+			bfri = i
 			continue
 		}
 	}
 	return result
+}
+func SplitRuneslimit(limit int, s string, seps []rune) []string {
+	rs := []rune(s)
+	result := []string{}
+	splitbuf := [][]int{}
+	for _, sep := range seps {
+		f := func(i interface{}) bool {
+			irs := i.(rune)
+			if irs == sep {
+				return true
+			}
+			return false
+		}
+		splitbuf = append(splitbuf, isuseindexl(SliceFindfunc(rs, f), limit))
+	}
+	/*starti := 0
+	for _, idx := range splitbuf {
+		result = append(result, string(rs[starti:idx]))
+		starti = idx
+	}
+	result = append(result, ForceSplitStringN(limit, string(rs[starti:]))...)
+	*/return result
 }
