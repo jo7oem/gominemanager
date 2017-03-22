@@ -6,6 +6,8 @@ import (
 	"io/ioutil"
 	"reflect"
 	"unicode/utf8"
+	"strconv"
+	"time"
 )
 
 type App struct {
@@ -217,6 +219,40 @@ func (t *App) Tweet(params map[string]string) (Tweets, error) {
 	return result, err
 
 }
+func (t *App) Safetweet(s string)(error){
+	var err error
+	str:=SplitRunelimit(120,s,'\n')
+	parm:=map[string]string{}
+	all:=len(str)
+	if all>1{
+		douser:=""
+		for n,twe:=range str{
+			parm["status"]=douser+" "+strconv.Itoa(n+1)+"/"+strconv.Itoa(all)+"\n"+twe
+			if n==0 {
+				tst, err := t.Tweet(parm)
+				if err != nil {
+					return err
+				}
+				douser = "@" + tst.User.Name
+				parm["in_reply_to_status_id"] = tst.Id_str
+				continue
+			}
+			time.Sleep(time.Duration(200+(50*n))*time.Millisecond)
+			tst, err := t.Tweet(parm)
+			if err != nil {
+				return err
+			}
+			douser = "@" + tst.User.Name
+			parm["in_reply_to_status_id"] = tst.Id_str
+
+		}
+
+	}else {
+		parm["status"]=s
+		_,err=t.Tweet(parm)
+	}
+	return err
+}
 
 func SliceStrlen(slice []string) []int {
 	result := make([]int, len(slice))
@@ -317,26 +353,4 @@ func isuseindexl(il []int, limit int) []int {
 		}
 	}
 	return result
-}
-func SplitRuneslimit(limit int, s string, seps []rune) []string {
-	rs := []rune(s)
-	result := []string{}
-	splitbuf := [][]int{}
-	for _, sep := range seps {
-		f := func(i interface{}) bool {
-			irs := i.(rune)
-			if irs == sep {
-				return true
-			}
-			return false
-		}
-		splitbuf = append(splitbuf, isuseindexl(SliceFindfunc(rs, f), limit))
-	}
-	/*starti := 0
-	for _, idx := range splitbuf {
-		result = append(result, string(rs[starti:idx]))
-		starti = idx
-	}
-	result = append(result, ForceSplitStringN(limit, string(rs[starti:]))...)
-	*/return result
 }
